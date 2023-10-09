@@ -1,1 +1,170 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
 
+library SafeMath {
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    if (a == 0) {
+        return 0;
+    }
+    uint256 c = a * b;
+    require(c / a == b, 'SafeMath mul failed');
+    return c;
+    }
+
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
+    }
+
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    require(b <= a, 'SafeMath sub failed');
+    return a - b;
+    }
+
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+    require(c >= a, 'SafeMath add failed');
+    return c;
+    }
+}
+
+    
+contract SolarPowerToken {
+
+    // Public variables of the token
+    using SafeMath for uint256;
+    string constant private _name = "Solar Power Token";
+    string constant private _symbol = "SPT";
+    uint256 constant private _decimals = 18;
+    uint256 private _totalSupply; // = 75000000 * (10**_decimals);  
+    uint256 constant public maxSupply = 75000000 * (10**_decimals);  
+    bool public safeguard;  //putting safeguard on will halt all non-owner functions
+
+    mapping (address => uint256) private _balanceOf;
+    mapping (address => mapping (address => uint256)) private _allowance;
+    mapping (address => bool) public frozenAccount;
+    address public votingContractAddress;
+
+
+
+    // This generates a public event of token transfer
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    // This notifies clients about the amount burnt
+    event Burn(address indexed from, uint256 value);
+        
+    // This generates a public event for frozen (blacklisting) accounts
+    event FrozenAccounts(address target, bool frozen);
+    
+    // This will log approval of token Transfer
+    event Approval(address indexed from, address indexed spender, uint256 value);
+
+
+    constructor(address _votingContractAddress) {
+        votingContractAddress = _votingContractAddress;
+    }
+
+
+    function name() public pure returns(string memory){
+        return _name;
+    }
+    
+
+    function symbol() public pure returns(string memory){
+        return _symbol;
+    }
+
+    function decimals() public pure returns(uint256){
+        return _decimals;
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return _totalSupply;
+    }
+    
+    function balanceOf(address user) public view returns(uint256){
+        return _balanceOf[user];
+    }
+
+    function allowance(address owner, address spender) public view returns (uint256) {
+        return _allowance[owner][spender];
+    }
+    
+    function _transfer(address _from, address _to, uint _value) internal {
+        require(!safeguard);
+        require (_to != address(0)); 
+        require(!frozenAccount[_from]);                    
+        require(!frozenAccount[_to]);                       
+        
+
+        _balanceOf[_from] = _balanceOf[_from].sub(_value);    
+        _balanceOf[_to] = _balanceOf[_to].add(_value);        
+        
+
+        emit Transfer(_from, _to, _value);
+    }
+
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+        _transfer(msg.sender, _to, _value);
+        return true;
+    }
+
+
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        _allowance[_from][msg.sender] = _allowance[_from][msg.sender].sub(_value);
+        _transfer(_from, _to, _value);
+        return true;
+    }
+
+
+    function approve(address _spender, uint256 _value) public returns (bool success) {
+        _allowance[msg.sender][_spender] = _value;
+        emit Approval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    function increase_allowance(address spender, uint256 value) public returns (bool) {
+        require(spender != address(0));
+        _allowance[msg.sender][spender] = _allowance[msg.sender][spender].add(value);
+        emit Approval(msg.sender, spender, _allowance[msg.sender][spender]);
+        return true;
+    }
+
+    function decrease_allowance(address spender, uint256 value) public returns (bool) {
+        require(spender != address(0));
+        _allowance[msg.sender][spender] = _allowance[msg.sender][spender].sub(value);
+        emit Approval(msg.sender, spender, _allowance[msg.sender][spender]);
+        return true;
+    }
+
+    function burn(uint256 _value) public returns (bool success) {
+        _balanceOf[msg.sender] = _balanceOf[msg.sender].sub(_value);  
+        _totalSupply = _totalSupply.sub(_value);                     
+        emit Burn(msg.sender, _value);
+        emit Transfer(msg.sender, address(0), _value);
+        return true;
+    }
+
+    function burnFrom(address _from, uint256 _value) public returns (bool success) {
+        _balanceOf[_from] = _balanceOf[_from].sub(_value);                         // Subtract from the targeted balance
+        _allowance[_from][msg.sender] = _allowance[_from][msg.sender].sub(_value); // Subtract from the sender's allowance
+        _totalSupply = _totalSupply.sub(_value);                                   // Update totalSupply
+        emit  Burn(_from, _value);
+        emit Transfer(_from, address(0), _value);
+        return true;
+    }
+        
+
+    function mintToken(address target, uint256 mintedAmount) public {
+        require(msg.sender == votingContractAddress, "only voting contract can call");
+        require(_totalSupply.add(mintedAmount) <= maxSupply, "Cannot Mint more than maximum supply");
+        _balanceOf[target] = _balanceOf[target].add(mintedAmount);
+        _totalSupply = _totalSupply.add(mintedAmount);
+        emit Transfer(address(0), target, mintedAmount);
+    }
+
+
+    
+}
