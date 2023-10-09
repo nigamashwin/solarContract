@@ -40,7 +40,7 @@ contract SolarPowerToken {
     uint256 constant private _decimals = 18;
     uint256 private _totalSupply; // = 75000000 * (10**_decimals);  
     uint256 constant public maxSupply = 75000000 * (10**_decimals);  
-    bool public safeguard;  //putting safeguard on will halt all non-owner functions
+    
 
     mapping (address => uint256) private _balanceOf;
     mapping (address => mapping (address => uint256)) private _allowance;
