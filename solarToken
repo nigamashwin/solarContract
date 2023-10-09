@@ -44,7 +44,6 @@ contract SolarPowerToken {
 
     mapping (address => uint256) private _balanceOf;
     mapping (address => mapping (address => uint256)) private _allowance;
-    mapping (address => bool) public frozenAccount;
     address public votingContractAddress;
 
 
@@ -54,9 +53,6 @@ contract SolarPowerToken {
 
     // This notifies clients about the amount burnt
     event Burn(address indexed from, uint256 value);
-        
-    // This generates a public event for frozen (blacklisting) accounts
-    event FrozenAccounts(address target, bool frozen);
     
     // This will log approval of token Transfer
     event Approval(address indexed from, address indexed spender, uint256 value);
@@ -93,17 +89,10 @@ contract SolarPowerToken {
     }
     
     function _transfer(address _from, address _to, uint _value) internal {
-        require(!safeguard);
         require (_to != address(0)); 
-        require(!frozenAccount[_from]);                    
-        require(!frozenAccount[_to]);                       
-        
-
         _balanceOf[_from] = _balanceOf[_from].sub(_value);    
         _balanceOf[_to] = _balanceOf[_to].add(_value);        
-        
-
-        emit Transfer(_from, _to, _value);
+         emit Transfer(_from, _to, _value);
     }
 
     function transfer(address _to, uint256 _value) public returns (bool success) {
